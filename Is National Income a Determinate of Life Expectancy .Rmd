@@ -1,0 +1,553 @@
+---
+title: "Is National Income a Determinate of Life Expectancy?"
+author:
+  - Anamika
+  - Apoorv
+  - Cina
+  - Ruoyu(Sean)
+date: "3/12/2022"
+output:
+  prettydoc::html_pretty:
+    theme: architect
+    highlight: github
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+getwd()
+
+```
+
+
+```{r message=FALSE, warning=FALSE, include=FALSE,message=FALSE}
+##Import Libraries and set working directory
+
+library(tidyverse) 
+library(dplyr)
+library(ggplot2)
+library(car)
+library(lattice)
+library(tidyr)
+library(caret)
+library(MASS)
+library(broom)
+library(ROCR)
+library(psych)
+library(caTools)
+library(stargazer)
+library(lmtest)
+library(sandwich)
+library(ggeffects)
+library(ggcorrplot)
+library(corrr)
+library(lattice)
+library(erer)
+ cse=function(reg) {
+        rob=sqrt(diag(vcovHC(reg, type="HC1")))
+        return(rob)
+        }
+```
+
+<center>![](giphy.gif)</center>
+
+## Abstract
+
+
+The rise in human life expectancy at birth over the past two centuries is a remarkable accomplishment of modern civilization. At present, among the world’s nations, Japanese women have the highest life expectancy at birth, above 87 years. International objectives for increasing life expectancy and overall health have generally been focused on increasing the quality of healthcare accessible to individuals. These initiatives for increasing the quality of healthcare almost always pertain to reducing healthcare expenses, making it easier and more affordable for individuals to receive the healthcare that they need. Evidence suggests that social and economic factors such as income and level of education may have a larger effect on increasing general well-being and life expectancy than previously thought.
+
+ 
+
+This project is a cross-country analysis of the factors affecting the life expectancy at birth and discusses the causal relationship of each of these factors to answer the established hypothesis. We have estimated and interpretated the multivariate linear regression models using actual data and employed appropriate statistical tests taught to us in this course to complete this project.
+
+## Introduction
+***
+
+Life expectancy has risen dramatically over the past few centuries, with the global average life expectancy having more than doubled since 1900. The inequality of life expectancy is still apparent, however, when examining data across many countries. As life expectancy began to rise throughout industrialized countries in the early 19th century, it stayed low across the rest of the world. Instinctively, it could be concluded that richer countries had access to better healthcare and the income to support healthier, more relaxed lifestyles, which in turn led to a higher life expectancy amongst its citizens. In comparison, citizens of poorer countries lacked the resources and infrastructure that act as leading factors in increasing life expectancy. Over the past several decades, this inequality has decreased significantly, with no country having a lower life expectancy than the country with the highest life expectancy in 1800. There is, however, still a large disparity between the life expectancy of citizens in wealthy, developed countries and those from poorer countries.
+
+
+
+This project plans to examine the relationship between national income, as measured through GDP per capita, and the life expectancy of countries across the globe. We expect to see a strong relationship between national income and life expectancy, as wealthier countries likely have better healthcare infrastructure and less stressful lifestyles than poorer countries, both of which have been identified as factors that can lead to higher life expectancy.
+
+
+
+Our hypothesis is that there is a causal relationship between national income of a country and the life expectancy at birth of its citizens. Citizens of countries with a higher level of national income likely have a higher standard of living, healthier lifestyles, and access to better healthcare infrastructure, all of which contribute to a longer life expectancy.
+
+## Y Breakdown
+***
+
+The dynamics of population will continue being one of the most important and overwhelming factors in the society and economy of any country and region. All countries, irrespective of how rich or poor they are, make every effort to improve the health of their populations. At macro level, life expectancy at birth of a country is a key indicator of a population’s health status. In recent years, life expectancy has shown a rising trend which has intrigued publications and researchers to use life expectancy as a measure of assessing economic and social development of a country or a region. This change in life expectancy may be caused by various factors, including:
+
+  * National Income - It is believed, countries with a higher level of national income have higher life expectancy. As a proxy for national income, we have a variable called ‘log(GDP Per Capita) (in US$)’ which denotes the gross domestic product per capita. Since the raw data set included GDP per capita values in US dollars, we have converted the values using the log function.
+  * Health Expenditure - The higher the economy spends on healthcare, it is believed that its population will be able to afford better healthcare services leading them to live longer. We have ‘Current healthcare expenditure as a % of GDP’ that is the percent of total GDP being spent on healthcare, and this can be used as a potential control variable.
+  * Population Growth - An increase in population is associated with a decrease in life expectancy. Keeping other factors unchanged, if the population grows at a higher rate then same pool of resources now need to be availed by a larger share of population. This leads to a deterioration in the population’s life expectancy as they do not have access to the facilities that they would have if the population grew by a smaller percentage. We will use ‘Population Growth (Annual %)’ which indicates the rate of population growth for each country in 2018.
+  * Infant mortality - Life expectancy is the average age at which people die. So, if there is a high infant mortality rate, the life expectancy would be shorter. We will use ‘Infant Mortality per 1,000 live births’ which indicates the number of infant deaths for every 1,000 live births. This can be used as a potential control variable.
+  * Inflation - Inflation is a general increase in the prices of goods and services, accompanied by a decrease in the purchasing value of money. Higher life expectancy means that you will live longer and as you grow older, inflation will continue to increase, your purchasing power will keep diminishing. A diminishing purchasing power leads to the unavailability of cheap and effective healthcare, lower participation in medical advances as well as technological progress. We have ‘Inflation, consumer prices (annual %)’ which indicates the annual growth rate in the consumer prices for a basket of goods.
+  * Education Expenditure - At an individual level, previous studies have shown that highly educated adults have annual mortality rates lower than less-educated adults. The benefits of a higher level of education include better occupations and higher levels of income, higher cognitive function, and healthier behavior. All of these factors can contribute to a longer life expectancy as a result of pursuing a higher level of education at an individual level. We have ‘Current education expenditure as a % of GDP’ as a measure of proportion of total GDP of a country being spent on education. We have converted the values using the log function to clean up and make the data usable as this will help us distribute on a normal distribution curve
+  
+## Hypothesis Question
+***
+
+<b> Is national income of a country a factor in determining the life expectancy at birth of a country?</b>
+
+<b>$\sf{H_{O}}$</b> : There is no association between national income and life expectancy.
+
+<b>$\sf{H_{A}}$</b> : Countries with higher levels of national income will have higher life expectancy at birth.
+
+* Dependent variable: 
+  + Life expectancy at birth in years
+* Independent Variables: 
+  + Variable of interest: GDP per capital in US dollars
+  + Control Variables: Government expenditure on healthcare as a percent of GDP, Government expenditure on education as a percent of GDP, annual population growth rate, infant mortality per 1,000 live births and annual inflation rate
+  
+## Let's import the data from CSV
+***
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+data0 = read.csv("Project_Data_Final_Raw.csv")
+head(data0)
+```
+
+## What does this data look like?
+***
+```{r}
+data = read.csv("Project_Data_Final_Clean.csv")
+data1 = read.csv("Data_Raw_Boxplot.csv")
+stargazer(data, type="text", median=TRUE, iqr=TRUE,digits=1, title="Descriptive Statistics")
+```
+
+## Lets plot the data to see if there are any outliers
+
+```{r}
+par(mfrow=c(1,3))
+boxplot(x=data1$GDP_per_capita, xlab="GDP_per_capita",col=c('powderblue'))
+boxplot(x=data1$HealthExpenditure_percentofGDP, xlab="HealthExpenditure_percentofGDP",col=c('powderblue'))
+boxplot(x=data1$Population_Growth, xlab='Population_Growth',col=c('powderblue'))
+boxplot(x=data1$Infant_Mortality_per1000livebirth, xlab='Infant_Mortality_per1000livebirth',col=c('powderblue'))
+boxplot(x=data1$Inflation_ConsumerPrices_percent, xlab='Inflation_ConsumerPrices_percent',col=c('powderblue'))
+boxplot(x=data1$Current_education_expenditure_percentofGDP, xlab='Current_education_expenditure_percentofGDP',col=c('powderblue'))
+boxplot(x=data1$Life_expectancy_Birth_inyears, xlab='Life_expectancy_Birth_inyears',col=c('powderblue'))
+```
+
+To clean the data we looked for Na values in our data set and for potential outliers. After analyzing the box plots and how the data is distributed we imputed the Na values based on either the mean or the median as shown in our code. We treated the outliers as Na values as well because we were not able to remove the entire row as our data sample was small. To make the GDP and Inflation column usable we logged these values as this would present the data as normally distributed.
+
+## Data Cleaning and Exploration
+
+```{r}
+data[is.na(data$GDP_per_capita) == TRUE, "GDP_per_capita"] = round(mean(data$GDP_per_capita, na.rm = TRUE))
+data[is.na(data$HealthExpenditure_percentofGDP) == TRUE, "HealthExpenditure_percentofGDP"] = round(mean(data$HealthExpenditure_percentofGDP, na.rm = TRUE))
+data[is.na(data$Population_Growth) == TRUE, "Population_Growth"] = round(mean(data$Population_Growth, na.rm = TRUE))
+data[is.na(data$Infant_Mortality_per1000livebirth) == TRUE, "Infant_Mortality_per1000livebirth"] = median(data$Infant_Mortality_per1000livebirth, na.rm = TRUE)
+data[is.na(data$Inflation_ConsumerPrices_percent)== TRUE, "Inflation_ConsumerPrices_percent"] = round(mean(data$Inflation_ConsumerPrices_percent, na.rm = TRUE))
+data[is.na(data$Current_education_expenditure_percentofGDP) == TRUE, "Current_education_expenditure_percentofGDP"] = round(mean(data$Current_education_expenditure_percentofGDP, na.rm = TRUE))
+data[is.na(data$Life_expectancy_Birth_inyears) == TRUE, "Life_expectancy_Birth_inyears"] = median(data$Life_expectancy_Birth_inyears, na.rm = TRUE)
+```
+
+***
+### Let's check for missing values 
+
+```{r}
+colSums(is.na(data0)) #check count of missing values before imputing
+```
+
+### After imputing the missing values
+
+```{r}
+colSums(is.na(data)) #check count of missing values before imputing
+```
+
+### Correlation between independent variables
+
+```{r}
+ggcorrplot(cor(data, use="pairwise.complete.obs"), p.mat = cor_pmat(data), hc.order=FALSE, type='lower',lab=TRUE, lab_size=2.5)
+```
+
+## Analysis
+***
+For simplicity, we use abbreviations for our variables below:
+
+Life_expectancy_Birth_inyears = LEB
+
+log(GDP_per_capital) = log_GDP
+
+GDP_per_capital = GDP_cap
+
+HealthExpenditure_percentofGDP = HE_%GDP
+
+Population Growth = PG
+
+Infant_Mortality_per1000livebirth = IM
+
+Current_education_expenditure_percentofGDP = E_%GDP
+
+Inflation_ConsumerPrices_percentage = ICP_%
+
+```{r}
+lfit1=lm(Life_expectancy_Birth_inyears~log.GDP_per_capita., data=data)
+lfit2=lm(Life_expectancy_Birth_inyears~log.GDP_per_capita.+HealthExpenditure_percentofGDP, data=data)
+lfit3=lm(Life_expectancy_Birth_inyears~log.GDP_per_capita.+HealthExpenditure_percentofGDP+Population_Growth, data=data)
+lfit4=lm(Life_expectancy_Birth_inyears~log.GDP_per_capita.+HealthExpenditure_percentofGDP+Population_Growth+Infant_Mortality_per1000livebirth, data=data)
+lfit5=lm(Life_expectancy_Birth_inyears~log.GDP_per_capita.+HealthExpenditure_percentofGDP+Population_Growth+Infant_Mortality_per1000livebirth+Inflation_ConsumerPrices_percent, data=data)
+lfit6=lm(Life_expectancy_Birth_inyears~log.GDP_per_capita.+HealthExpenditure_percentofGDP+Population_Growth+Infant_Mortality_per1000livebirth+Inflation_ConsumerPrices_percent+log(Current_education_expenditure_percentofGDP), data=data)
+```
+
+### How does our Variable of Interest affect our dependent variable?
+
+From our expectations, <b>an increase in the national income of a country should increase the life expectancy at birth.</b>
+
+```{r}
+Plot_1  = ggplot(data, aes(x=log.GDP_per_capita., y=Life_expectancy_Birth_inyears)) + geom_point(col="blue")  +
+  labs(title = "National Income vs Life Expectancy", x = "GDP Per Capita", y = "Life Expectancy") +
+  stat_smooth(method="lm", se=FALSE, col = "green" )
+suppressMessages(print(Plot_1))
+```
+
+And from the plot, its obvious that the log(National Income) have a positive linear relationship with Life Expectancy. 
+
+## In our base model, lets add some control variable
+***
+### Adding Control Variable: Health Expenditure(Percent of GDP)
+
+```{r}
+Plot_2  = ggplot(data, aes(x=HealthExpenditure_percentofGDP, y=Life_expectancy_Birth_inyears)) + geom_point(col="blue")  +
+  labs(title = "Health Expenditure(Percent of GDP) vs Life_Expectancy", x = "Health Expenditure(Percent of GDP)", y = "Life Expectancy") +
+  stat_smooth(method="lm", se=FALSE, col = "green" )
+suppressMessages(print(Plot_2))
+```
+
+From the plot between current health expenditure and dependent variable, it appears <b>as expenditure on healthcare increases, the life expectancy at birth increases.</b> 
+
+Lets see how Current <b> Health Expenditure</b>  relates to National Income (variable of interest).
+
+```{r}
+cat("Correlation (X, Z):", cor(data$log.GDP_per_capita., data$HealthExpenditure_percentofGDP))
+anova(lm(log.GDP_per_capita. ~ HealthExpenditure_percentofGDP, data=data))
+```
+
+Now, when given a single argument to anova, it produces a table which tests whether the model terms are significant. So, through the line of code shown above, we are trying to show how ‘Health Expenditure’ relates to our variable of interest (GDP_per_capita). From the results we can see that not only Health Expenditure is positively correlated with GDP_per_capita, but also significant with 95% confidence. Thus establishing the relevance that corr (X, Z) > 0.
+
+  * As Z(Health Expenditure) affects Y positively, and corr(X,Z) > 0, we suspect presence of upward bias.
+
+```{r}
+stargazer(lfit1, lfit2, se= list(cse(lfit1), cse(lfit2)), 
+        title="Life Expectancy", type="text", 
+        column.labels=c("Regression-1", "Regression-2"),
+        star.cutoffs=c(0.05,0.01,0.001), df=FALSE, digits=3)
+```
+
+* From the Regression-2 results, we see that adding <b>Health Expenditure</b> decreased estimate of National Income, suggesting that Regression-1 suffered from upward bias. 
+
+<b>Interpretation</b>: \
+
+* Regression1 -
+  * log(GDP_per_capita): For log_GDP a percent increase of GDP_per_capital will increase LEB by 0.10261 years on average assuming all other variables are constant
+* Regression2 -
+  * log(GDP_per_capita): For log_GDP a percent increase of GDP_per_capital will increase LEB by 0.09555 years on average assuming all other variables are constant
+  * HealthExpenditure_percentofGDP: For HE_%GDP a percent increase of GDP will increase LEB by 0.451  years on average assuming all other variables are constant
+
+
+***
+
+### Adding Control Variable: Population Growth
+
+```{r}
+Plot_3  = ggplot(data, aes(x=Population_Growth, y=Life_expectancy_Birth_inyears)) + geom_point(col="blue")  +
+  labs(title = "Population Growth vs Life_Expectancy", x = "Population Growth", y = "Life Expectancy") +
+  stat_smooth(method="lm", se=FALSE, col = "green" )
+suppressMessages(print(Plot_3))
+```
+
+<b>From the plot between Population Growth and Life Expectancy, it appears that the Life Expectancy decreases when population growth increases.</b> \
+
+Lets see how <b>Current Population Growth</b>  relates to National Income (variable of interest).
+
+```{r}
+cat("Correlation (X, Z):", cor(data$log.GDP_per_capita., data$Population_Growth))
+anova(lm(log.GDP_per_capita. ~ Population_Growth, data=data))
+```
+
+Now, when given a single argument to anova, it produces a table which tests whether the model terms are significant. So, through the line of code shown above, we are trying to show how ‘Population_Growth’ relates to our variable of interest (GDP_per_capita). From the results we can see that not only Population_Growth is negatively correlated with GDP_per_capita, but also significant with 95% confidence. Thus establishing the relevance that corr (X, Z) < 0.
+
+  * As Z(Population_Growth) affects Y negatively, and corr(X,Z) < 0, we suspect presence of upward bias.
+
+
+```{r}
+stargazer(lfit1, lfit2, lfit3, se= list(cse(lfit1), cse(lfit2), cse(lfit3)), 
+        title="Life Expectancy", type="text", 
+        column.labels=c("Regression-1", "Regression-2", "Regression-3"),
+        star.cutoffs=c(0.05,0.01,0.001), df=FALSE, digits=3)
+```
+
+* From the Regression-3 results, we see that adding <b>Population_Growth</b> decreased estimate of National Income, suggesting that Regression-2 suffered from upward bias. 
+
+<b>Interpretation</b>: \
+
+* Regression2 -
+  * log(GDP_per_capita): For log_GDP a percent increase of GDP_per_capital will increase LEB by 0.09555 years on average assuming all other variables are constant
+  * HealthExpenditure_percentofGDP: For HE_%GDP a percent increase of GDP will increase LEB by 0.451  years on average assuming all other variables are constant
+* Regression3 -
+  * log(GDP_per_capita): For log_GDP a percent increase of GDP_per_capital will increase LEB by 0.08582 years on average assuming all other variables are constant
+  * HealthExpenditure_percentofGDP: For HE_%GDP a percent increase of GDP will increase LEB by 0.356 years on average assuming all other variables are constant
+  * Population_Growth: For PG a percent increase of PG will decrease LEB by 1.168 years on average assuming all other variables are constant
+
+***
+
+### Adding Control Variable: Infant Mortality
+
+```{r}
+Plot_4  = ggplot(data, aes(x=Infant_Mortality_per1000livebirth, y=Life_expectancy_Birth_inyears)) + geom_point(col="blue")  +
+  labs(title = "Infant Mortality vs Life_Expectancy", x = "Infant Mortality", y = "Life Expectancy") +
+  stat_smooth(method="lm", se=FALSE, col = "green" )
+suppressMessages(print(Plot_4))
+```
+
+<b>From the plot between Infant Mortality and Life Expectancy, it appears that the Life Expectancy decreases when Infant Mortality increases.</b> \
+
+Lets see how Current <b> Infant Mortality</b>  relates to National Income (variable of interest).
+
+```{r}
+cat("Correlation (X, Z):", cor(data$log.GDP_per_capita., data$Infant_Mortality_per1000livebirth))
+anova(lm(log.GDP_per_capita. ~ Infant_Mortality_per1000livebirth, data=data))
+```
+
+Now, when given a single argument to anova, it produces a table which tests whether the model terms are significant. So, through the line of code shown above, we are trying to show how ‘Infant_Mortality’ relates to our variable of interest (GDP_per_capita). From the results we can see that not only Infant_Mortality is negatively correlated with GDP_per_capita, but also significant with 95% confidence. Thus establishing the relevance that corr (X, Z) < 0.
+
+  * As Z(Infant_Mortality) affects Y negatively, and corr(X,Z) < 0, we suspect presence of upward bias.
+
+```{r}
+stargazer(lfit1, lfit2, lfit3, lfit4, se= list(cse(lfit1), cse(lfit2), cse(lfit3), cse(lfit4)), 
+        title="Life Expectancy", type="text", 
+        column.labels=c("Regression-1", "Regression-2", "Regression-3", "Regression-4"),
+        star.cutoffs=c(0.05,0.01,0.001), df=FALSE, digits=3)
+```
+
+* From the Regression-4 results, we see that adding <b>Infant_Mortality</b> decreased estimate of National Income, suggesting that Regression-3 suffered from upward bias. 
+
+<b>Interpretation</b>: \
+
+* Regression3 -
+  * log(GDP_per_capita): For log_GDP a percent increase of GDP_per_capital will increase LEB by 0.08582 years on average assuming all other variables are constant
+  * HealthExpenditure_percentofGDP: For HE_%GDP a percent increase of GDP will increase LEB by 0.356 years on average assuming all other variables are constant
+  * Population_Growth: For PG a percent increase of PG will decrease LEB by 1.168 years on average assuming all other variables are constant
+* Regression4 -
+  * log(GDP_per_capita): For log_GDP a percent increase of GDP_per_capital will increase LEB by 0.04610 years on average assuming all other variables are constant
+  * HealthExpenditure_percentofGDP: For HE_%GDP a percent increase of GDP will increase LEB by 0.153 years on average assuming all other variables are constant
+  * Population_Growth: For PG a percent increase of PG will increase LEB by 0.232  years on average assuming all other variables are constant
+  * Infant_Mortality_per1000livebirth: For IM increase IM per 1,000 live births by 1 will decrease LEB by 0.238 years on average assuming all other variables are constant
+
+***
+
+### Adding Control Variable: CPI
+
+```{r}
+Plot_5  = ggplot(data, aes(x=Inflation_ConsumerPrices_percent, y=Life_expectancy_Birth_inyears)) + geom_point(col="blue")  +
+  labs(title = "CPI vs Life_Expectancy", x = "CPI", y = "Life Expectancy") +
+  stat_smooth(method="lm", se=FALSE, col = "green" )
+suppressMessages(print(Plot_5))
+```
+
+<b>From the plot between CPI and Life Expectancy, it appears that the Life Expectancy decreases when CPI increases.</b> \
+
+Lets see how Current <b> CPI</b>  relates to National Income (variable of interest).
+
+```{r}
+cat("Correlation (X, Z):", cor(data$log.GDP_per_capita., data$Inflation_ConsumerPrices_percent))
+anova(lm(log.GDP_per_capita. ~ Inflation_ConsumerPrices_percent, data=data))
+```
+
+Now, when given a single argument to anova, it produces a table which tests whether the model terms are significant. So, through the line of code shown above, we are trying to show how ‘CPI’ relates to our variable of interest (GDP_per_capita). From the results we can see that not only CPI is positively correlated with GDP_per_capita, but also significant with 95% confidence. Thus establishing the relevance that corr (X, Z) < 0.
+
+  * As Z( CPI) affects Y negatively, and corr(X,Z) < 0, we suspect presence of upward bias.
+
+
+```{r}
+stargazer(lfit1, lfit2, lfit3, lfit4, lfit5, se= list(cse(lfit1), cse(lfit2), cse(lfit3), cse(lfit4), cse(lfit5)), 
+        title="Life Expectancy", type="text", 
+        column.labels=c("Regression-1", "Regression-2", "Regression-3", "Regression-4", "Regression-5"),
+        star.cutoffs=c(0.05,0.01,0.001), df=FALSE, digits=3)
+```
+
+* From the Regression-5 results, we see that adding <b>CPI</b> actually decreased estimate of National Income, suggesting that Regression-4 suffered from upward bias. 
+
+<b>Interpretation</b>: \
+
+* Regression4 -
+  * log(GDP_per_capita): For log_GDP a percent increase of GDP_per_capital will increase LEB by 0.04610 years on average assuming all other variables are constant
+  * HealthExpenditure_percentofGDP: For HE_%GDP a percent increase of GDP will increase LEB by 0.153 years on average assuming all other variables are constant
+  * Population_Growth: For PG a percent increase of PG will increase LEB by 0.232  years on average assuming all other variables are constant
+  * Infant_Mortality_per1000livebirth: For IM increase IM per 1,000 live births by 1 will decrease LEB by 0.238 years on average assuming all other variables are constant
+* Regression5 -
+  * log(GDP_per_capita): For log_GDP a percent increase of GDP_per_capital will increase LEB by 0.04502  years on average assuming all other variables are constant
+  * HealthExpenditure_percentofGDP: For HE_%GDP a percent increase of GDP will increase LEB by 0.150 years on average assuming all other variables are constant
+  * Population_Growth: For PG a percent increase of PG will increase LEB by 0.226  years on average assuming all other variables are constant
+  * Infant_Mortality_per1000livebirth: For IM increase IM per 1,000 live births by 1 will decrease LEB by 0.238 years on average assuming all other variables are constant
+  * Inflation_ConsumerPrices_percent: For ICP_% a percent increase of ICP_% will decrease LEB by 0.057 years on average assuming all other variables are constant
+
+***
+
+### Adding Control Variable: log(Current Education Expenditure)
+
+```{r}
+Plot_6  = ggplot(data, aes(x=log(Current_education_expenditure_percentofGDP), y=Life_expectancy_Birth_inyears)) + geom_point(col="blue")  +
+  labs(title = "log(Current Education Expenditure vs Life Expectancy)", x = "log(Current Education Expenditure)", y = "Life Expectancy") +
+  stat_smooth(method="lm", se=FALSE, col = "green" )
+suppressMessages(print(Plot_6))
+```
+
+<b>From the plot between log(Current Education Expenditure) and Life Expectancy, it appears that the Life Expectancy increases when Current Education Expenditure increases.</b> \
+
+Lets see how <b> log(Current Education Expenditure)</b>  relates to National Income (variable of interest).
+
+```{r}
+cat("Correlation (X, Z):", cor(data$log.GDP_per_capita., log(data$Current_education_expenditure_percentofGDP)))
+anova(lm(log.GDP_per_capita. ~ log(Current_education_expenditure_percentofGDP), data=data))
+```
+
+Now, when given a single argument to anova, it produces a table which tests whether the model terms are significant. So, through the line of code shown above, we are trying to show how ‘Current Education Expenditure’ relates to our variable of interest (GDP_per_capita). From the results we can see that not only Current Education Expenditure is positively correlated with GDP_per_capita, but also significant with 95% confidence. Thus establishing the relevance that corr (X, Z) > 0.
+
+  * As Z(Current Education Expenditure) affects Y positively, and corr(X,Z) > 0, we suspect presence of upward bias.
+
+```{r}
+stargazer(lfit1, lfit2, lfit3, lfit4, lfit5, lfit6, se= list(cse(lfit1), cse(lfit2), cse(lfit3), cse(lfit4), cse(lfit5), cse(lfit6)), 
+        title="Life Expectancy", type="text", 
+        column.labels=c("Regression-1", "Regression-2", "Regression-3", "Regression-4", "Regression-5", "Regression-6"),
+        star.cutoffs=c(0.05,0.01,0.001), df=FALSE, digits=3)
+```
+
+* From the Regression-6 results, we see that adding <b>log(Current Education Expenditure)</b> actually increased estimate of National Income, suggesting that Regression-5 suffered from upward bias. 
+
+<b>Interpretation</b>: \
+
+* Regression5 -
+  * log(GDP_per_capita): For log_GDP a percent increase of GDP_per_capital will increase LEB by 0.04502  years on average assuming all other variables are constant
+  * HealthExpenditure_percentofGDP: For HE_%GDP a percent increase of GDP will increase LEB by 0.150 years on average assuming all other variables are constant
+  * Population_Growth: For PG a percent increase of PG will increase LEB by 0.226  years on average assuming all other variables are constant
+  * Infant_Mortality_per1000livebirth: For IM increase IM per 1,000 live births by 1 will decrease LEB by 0.238 years on average assuming all other variables are constant
+  * Inflation_ConsumerPrices_percent: For ICP_% a percent increase of ICP_% will decrease LEB by 0.057 years on average assuming all other variables are constant
+* Regression6 -
+  * log(GDP_per_capita): For log_GDP a percent increase of GDP_per_capital will increase LEB by 0.04489  years on average assuming all other variables are constant
+  * HealthExpenditure_percentofGDP: For HE_%GDP a percent increase of GDP will increase LEB by 0.146 years on average assuming all other variables are constant
+  * Population_Growth: For PG a percent increase of PG will increase LEB by 0.224  years on average assuming all other variables are constant
+  * Infant_Mortality_per1000livebirth: For IM increase IM per 1,000 live births by 1 will decrease LEB by 0.237 years on average assuming all other variables are constant
+  * Inflation_ConsumerPrices_percent: For ICP_% a percent increase of ICP_% will decrease LEB by 0.057 years on average assuming all other variables are constant
+  * log(Current_education_expenditure_percentofGDP): For log(Current_education_expenditure_percentofGDP) a percent increase of Current_education_expenditure_percentofGDP will increase LEB by 0.00247  years on average assuming all other variables are constant
+  
+***
+
+## Joint Hypothesis Testing (F-Test)
+***
+
+After having all of our 5 regressions, we can then run joint hypothesis tests(F-Test) on them to decide which one is the best.
+
+### F-Test between Regression 5 & 6
+
+<b>$\sf{H_{O}}$</b>: β6=0,
+
+<b>$\sf{H_{A}}$</b>: β6	$\ne$ 0
+
+```{r}
+anova(lfit5, lfit6)
+```
+
+According to the results above, model with variable log(Current_education_expenditure_percentofGDP) is not significant, thus we are unable to reject the null hypothesis, which means that we shouldn't add it as a control variable.
+
+### F-Test between Regression 4 & 5
+
+Firstly, we compare the regression 4 and 5:
+
+<b>$\sf{H_{O}}$</b>: β5=0,
+
+<b>$\sf{H_{A}}$</b>: β5	$\ne$ 0
+
+
+```{r}
+anova(lfit4, lfit5)
+```
+
+According to the results above, model with variable Inflation_ConsumerPrices_percent is not significant, thus we are unable to reject the null hypothesis, which means that we shouldn't add it as a control variable.
+
+
+### F-Test between Regression 3 & 4
+
+Then, we run the test again on regression 3 and 4
+
+<b>$\sf{H_{O}}$</b>: β4=0,
+
+<b>$\sf{H_{A}}$</b>: β4	$\ne$ 0
+
+```{r}
+anova(lfit3, lfit4)
+```
+
+This time, it gives a small p-value for us to reject the null. So, we choose regression 4 as our final model.
+
+
+## Validity & Limitations
+***
+
++ <b> <u>Threats to Internal Validity </u></b>:
+
+  - <b> Omitted variable Bias</b> :
+  
+    We are missing some control variables in our regression as our beta for GDP is still changing when we are adding more variables.  If we had to do it all over again, we should find more factors like Gender, Race, Socio-economic status, person’s level of happiness (if it can be achieved), and War conflicted countries to provide a more definite answer towards the relationship between life expectancy and nation’s income (GDP). 
+    Solutions to address this limitation can be using instrumental variable regressions for additional variables gathered that may be harder to collect such as a person's level of happiness. A solution that should not be taken though is random control experiments to find the relationship between life expectancy and nation’s income (GDP) as it is highly unethical to experiment with people’s lives. 
+      
+  - <b> Wrong functional form   </b>:
+  
+    Our original data for GDP was not in the correct format to accommodate a linear regression. For this reason we corrected for this limitation by logging the variable to help fit the data better.
+    
+  - <b> Errors-in-variables bias  </b>: 
+    As mentioned in the Sample selection & Missing data section, there was missing data found in our data set. For that reason, there is a possibility that other errors of typos in data could have been made in the data that we can’t confirm and rule out. 
+    A larger concern though for limitations are countries' false reporting values to make themselves appear better. Less trustworthy countries might either hide certain cases of Infant mortality reports or inflate their expenditure of education and health to prove they are better than other countries. Bias of how impactful these variables are to life expediency can come to question.
+    
+  - <b> Sample Selection bias & missing data </b>: 
+    In our data set there were several missing data points that we had to clean up. The approach taken was to replace the missing value with averages of other data points collected for the variable. This though creates a bias closer to our current data points as the original points could have been either significantly above or below our averages which should have then showed us more of a skewed data. We addressed the outliers similarly to the missing data except for the variable Inflation. Exception was made due to further examining the data points and finding that the countries having crazy high inflation were accurate and not errors as the country made some poor choices. 
+           
+    
++ <b> <u>Threats to Internal Validity </u></b>:
+
+  - <b> Difference in Population</b> :
+    From our data source we collected 205 countries and regions to make our regression models. There are only 195 countries in the world. Not only did we likely cover all countries in the world but include unrecognized regions as well. If on the off chance a region was not accounted for, between the 205 sample countries/regions collected, one must be close enough to make an easy comparable. Overall, this research counts for overcoming this potential limitation.
+    
+  - <b> Difference in Setting</b> :
+    There are certain questions that can change how we view our data results. Control variables like healthcare expenditure is a bit vague. Examples would be what did the country spend the money on towards healthcare. Was it to increase production of medical supplies, support research and create new inventions, increase number of staff, or simply pay each healthcare worker more? The difference between each scenario could have different impacts to expected life expectancy and additional clarification may be needed to dig deeper to see what exactly really makes that significant impact.   
+    
+## Conclusion
+***
+
+```{r}
+#coeff1 = summary(lfit1)$coefficients[2,1]
+#coeff1=round(coeff1,digits=3)
+ 
+#coeff2 = summary(lfit2)$coefficients[2,1]
+#coeff2=round(coeff2,digits=3)
+ 
+#coeff3 = summary(lfit3)$coefficients[2,1]
+#coeff3=round(coeff3,digits=3)
+
+#coeff4 = summary(lfit4)$coefficients[2,1]
+#coeff4=round(coeff4,digits=3)
+
+#life <- matrix(c (coeff1, coeff2, coeff3, coeff4),ncol=4,byrow=TRUE)
+#colnames(life) <- c("Regression 1","Regression 2","Regression 3","Regression 4")
+#rownames(life) <- c("Life Expectency")
+#life <- as.table(life)
+
+```
+
+Our goal was to establish causal relationship between Life Expectancy and National Income. After conducting a multi variate linear regression by adding control variables (Health Expenditure, Population Growth, Infant Mortality, Inflation, and Education Expenditure) we were able to determine that each of our regressions were statistically significant based on our F stat and were able to reduce omitted variable bias as well. With each added control variable our X value reduced and helped us get closer to the removal of omitted variable bias. With the addition of infant mortality at birth control variable the x value or GDP per capita had the most significant change. We were unable to remove the omitted variable bias therefore we concluded that we were not able to establish a causal relationship. 
+
+
+
+After conducting regressions with all 6 variables we compared the final regressions with each other using the anova function to determine which regression was the most effective and relevant. After comparison Regression 4 turned out to be statistically significant when compared to 5 or 6. The adjusted R square of regressions 4, 5 and 6 were exactly the same at 0.854 therefore we could pick 4 over 5 or 6. Although the control variables added in regression 5 and 6 were not statistically significant by themselves as T stat proved that, the relevance of 5 and 6 still stood as the regression was significant according to the F stat, furthermore the control variables added in each of them helped us narrow down the omitted variable bias further but not completely eliminate it. 
+
+
+
+Four limitations that could be found in our research are omitted variables, sample selection & missing data bias, error-in-variable bias and difference in setting. In the research we did though were able to resolve wrong functional form and difference in population risks in our research.
+
+
+
+Possible solutions to future researchers is to apply more variables that will help to remove the omitted variable bias and help establish causal relationships such as  Countries in War or not, person’s level of happiness and other such variables. 
+
+
+
+In addition another tool that can help cover some of the limitations are exploring and using instrumental variable regression to help with the omitted variables that may be harder to quantify. Although this research could not establish causal relationship, it is highly encouraged for others to pick up where we left off to help prove the relationship between life expectancy and national income.
+
